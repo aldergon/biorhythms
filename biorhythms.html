@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Калькулятор биоритмов</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f0f8ff;
+    margin: 0; padding: 20px;
+  }
+  h1 { text-align: center; }
+  form {
+    max-width: 400px; margin: 0 auto 30px;
+    background: #fff; padding: 20px; border-radius: 8px;
+  }
+  label { display: block; margin-top: 10px; }
+  input[type="date"] { width: 100%; padding: 8px; }
+  button { margin-top: 15px; width: 100%; padding: 10px; }
+  #charts { display: none; }
+  canvas { background: #fff; margin-top: 30px; border-radius: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Калькулятор биоритмов</h1>
+
+<form id="biorhythmForm">
+  <label>Введите дату рождения:
+    <input type="date" id="birthDate" required />
+  </label>
+  <button type="submit">Показать биоритмы</button>
+</form>
+
+<div id="charts">
+  <h2 style="text-align:center;">Биоритмы на 30 дней</h2>
+  <canvas id="physicalChart" width="800" height="300"></canvas>
+  <canvas id="emotionalChart" width="800" height="300"></canvas>
+  <canvas id="intellectualChart" width="800" height="300"></canvas>
+</div>
+
+<script>
+const ctxPhysical = document.getElementById('physicalChart').getContext('2d');
+const ctxEmotional = document.getElementById('emotionalChart').getContext('2d');
+const ctxIntellectual = document.getElementById('intellectualChart').getContext('2d');
+
+let physicalChart, emotionalChart, intellectualChart;
+
+function generateDates(startDate, daysCount) {
+  const dates = [];
+  for (let i=0; i<daysCount; i++) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + i);
+    dates.push(date);
+  }
+  return dates;
+}
+
+function daysBetween(d1, d2) {
+  const diff = Math.abs(d2 - d1);
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+function calculateBiorhythms(birthDate, dates) {
+  const physical = [], emotional = [], intellectual = [];
+  for (const date of dates) {
+    const lived = daysBetween(birthDate, date);
+    physical.push(Math.sin(2*Math.PI*lived/23));
+    emotional.push(Math.sin(2*Math.PI*lived/28));
+    intellectual.push(Math.sin(2*Math.PI*lived/33));
+  }
+  return { physical, emotional, intellectual };
+}
+
+function createChart(ctx, label, data) {
+  return new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: label,
+        data: data.values,
+        borderColor: 'blue',
+        backgroundColor: 'rgba(0,0,255,0.2)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 2,
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          min: -1,
+          max: 1,
+          ticks: {
+            callback: v => (v*100).toFixed(0) + '%'
+          }
+        }
+      }
+    }
+  });
+}
+
+document.getElementById('biorhythmForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const birthDateStr = document.getElementById('birthDate').value;
+  if (!birthDateStr) return;
+  const birthDate = new Date(birthDateStr);
+  const today = new Date();
+
+  const daysCount = 30;
+  const dates = generateDates(today, daysCount);
+  const labels = dates.map(d => d.toLocaleDateString());
+
+  const { physical, emotional, intellectual } = calculateBiorhythms(birthDate, dates);
+
+  if (physicalChart) physicalChart.destroy();
+  if (emotionalChart) emotionalChart.destroy();
+  if (intellectualChart) intellectualChart.destroy();
+  document.getElementById('charts').style.display = 'block';
+
+  physicalChart = createChart(ctxPhysical, 'Физический', { labels, values: physical });
+  emotionalChart = createChart(ctxEmotional, 'Эмоциональный', { labels, values: emotional });
+  intellectualChart = createChart(ctxIntellectual, 'Интеллектуальный', { labels, values: intellectual });
+});
+</script>
+
+</body>
+</html>
